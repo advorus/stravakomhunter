@@ -4,7 +4,7 @@
 
 ## Testing
 
-- [ ] `npm run verify`
+- [ ] `python -m pytest`
 
 ## Review focus
 
