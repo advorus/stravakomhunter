@@ -1,6 +1,6 @@
 # Strava KOM Checker
 
-A TypeScript service that pulls an athlete power curve from Intervals.icu, discovers nearby Strava segments, applies a physics-based forecast, and compares the predicted segment time with the current KOM.
+A Python service that pulls an athlete power curve from Intervals.icu, discovers nearby Strava segments, applies a physics-based forecast, and compares the predicted segment time with the current KOM.
 
 ## What this first version does
 
@@ -29,9 +29,11 @@ Example payload:
 ## Local setup
 
 1. Copy `.env.example` to `.env` and fill in your Intervals.icu and Strava credentials.
-2. Install dependencies with `npm install`.
-3. Start the dev server with `npm run dev`.
-4. Run the safety gate with `npm run verify`.
+2. Create a virtual environment with `python3 -m venv .venv`.
+3. Activate it with `source .venv/bin/activate`.
+4. Install test tooling with `python -m pip install pytest`.
+5. Start the server with `python -m strava_kom_checker`.
+6. Run the safety gate with `python -m pytest`.
 
 ## Forecast caveats
 
@@ -44,10 +46,9 @@ This version intentionally keeps the simulation explainable:
 
 ## Quality gates
 
-- `vitest` unit and HTTP tests
-- GitHub Actions runs `npm run verify` on pushes and pull requests
-- `husky` runs formatting on staged files and blocks pushes when verification fails
-- `commitlint` enforces conventional commit messages for atomic history
+- `pytest` unit and HTTP tests
+- GitHub Actions runs `python -m pytest` on pushes and pull requests
+- agents should run `python -m pytest` before opening a pull request
 
 ## Roadmap
 
