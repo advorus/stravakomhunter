@@ -1,1 +1,0 @@
-grep -Eq '^(feat|fix|ci|docs|test|refactor|chore)(\(.+\))?: .+' "$1"
