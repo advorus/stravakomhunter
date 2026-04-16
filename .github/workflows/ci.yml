@@ -19,4 +19,16 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install pytest
-      - run: python -m pytest
+      - name: Run unit and integration-marked default suite
+        run: python -m pytest
+      - name: Require Intervals.icu secrets for live PR validation
+        if: github.event_name == 'pull_request'
+        run: |
+          test -n "${{ secrets.INTERVALS_ICU_API_KEY }}" || (echo "Missing secret INTERVALS_ICU_API_KEY" && exit 1)
+          test -n "${{ secrets.INTERVALS_ICU_ATHLETE_ID }}" || (echo "Missing secret INTERVALS_ICU_ATHLETE_ID" && exit 1)
+      - name: Run live Intervals.icu integration regression test
+        env:
+          RUN_LIVE_INTERVALS_TEST: '1'
+          INTERVALS_ICU_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
+          INTERVALS_ICU_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ATHLETE_ID }}
+        run: python -m pytest tests/test_intervals_live.py -q
