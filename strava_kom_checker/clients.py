@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from typing import Any, Callable, Optional
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -13,8 +14,12 @@ JsonFetcher = Callable[[str, Optional[dict[str, str]]], tuple[int, dict[str, Any
 
 def fetch_json(url: str, headers: Optional[dict[str, str]] = None) -> tuple[int, dict[str, Any]]:
     request = Request(url, headers=headers or {})
-    with urlopen(request, timeout=20) as response:
-        return response.status, json.loads(response.read().decode("utf-8"))
+    try:
+        with urlopen(request, timeout=20) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        body = error.read().decode("utf-8")
+        return error.code, json.loads(body) if body else {}
 
 
 class IntervalsIcuClient:
