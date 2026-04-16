@@ -36,17 +36,34 @@ class IntervalsIcuClient:
     def get_power_curve(self, athlete_id: str) -> list[PowerCurvePoint]:
         credentials = base64.b64encode(f"API_KEY:{self.api_key}".encode()).decode()
         status, payload = self.fetcher(
-            f"{self.base_url}/athlete/{athlete_id}/powercurve",
+            f"{self.base_url}/athlete/{athlete_id}/power-curves?{urlencode({'curves': '1y', 'type': 'Ride'})}",
             {"Authorization": f"Basic {credentials}", "Accept": "application/json"},
         )
         if status < 200 or status >= 300:
             raise RuntimeError(f"Intervals.icu request failed with {status}")
 
-        bests = [
-            PowerCurvePoint(entry["secs"], entry["watts"])
-            for entry in payload.get("bests", [])
-            if entry.get("secs") and entry.get("watts")
-        ]
+        bests = []
+        list_payload = payload.get("list")
+        if isinstance(list_payload, list) and list_payload:
+            first_curve = list_payload[0]
+            secs = first_curve.get("secs") if isinstance(first_curve, dict) else None
+            values = first_curve.get("values") if isinstance(first_curve, dict) else None
+            if isinstance(secs, list) and isinstance(values, list):
+                bests = [
+                    PowerCurvePoint(duration_seconds=int(duration), power_watts=float(watts))
+                    for duration, watts in zip(secs, values)
+                    if isinstance(duration, (int, float))
+                    and isinstance(watts, (int, float))
+                    and duration > 0
+                    and watts > 0
+                ]
+
+        if not bests:
+            bests = [
+                PowerCurvePoint(entry["secs"], entry["watts"])
+                for entry in payload.get("bests", [])
+                if entry.get("secs") and entry.get("watts")
+            ]
         if bests:
             return sorted(bests, key=lambda point: point.duration_seconds)
 
