@@ -48,8 +48,7 @@ This version intentionally keeps the simulation explainable:
 
 - `pytest` unit and HTTP tests
 - GitHub Actions runs `python -m pytest` on pushes and pull requests
-- `husky` compiles Python files before commits and runs tests before pushes
-- commit messages are checked with a small conventional-commit shell pattern
+- agents should run `python -m pytest` before opening a pull request
 
 ## Roadmap
 
