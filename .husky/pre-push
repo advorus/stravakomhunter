@@ -1,1 +1,1 @@
-npm run verify
+python3 -m pytest

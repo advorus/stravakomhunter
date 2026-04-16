@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=58"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strava-kom-checker"
+version = "0.1.0"
+description = "Forecast theoretical Strava segment times from Intervals.icu power data, terrain, and weather."
+requires-python = ">=3.9"
+authors = [{ name = "Ben OKane" }]
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+strava-kom-checker = "strava_kom_checker.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
