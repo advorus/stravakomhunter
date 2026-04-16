@@ -13,4 +13,10 @@ describe('loadConfig', () => {
     expect(config.ATHLETE_MASS_KG).toBe(75);
     expect(config.ATHLETE_DRIVETRAIN_EFFICIENCY).toBe(0.975);
   });
+
+  it('explains missing required environment variables', () => {
+    expect(() => loadConfig({})).toThrow(
+      'Missing required environment variables: INTERVALS_ICU_API_KEY, INTERVALS_ICU_ATHLETE_ID, STRAVA_ACCESS_TOKEN',
+    );
+  });
 });

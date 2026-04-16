@@ -21,5 +21,23 @@ const envSchema = z.object({
 export type AppConfig = z.infer<typeof envSchema>;
 
 export const loadConfig = (env: NodeJS.ProcessEnv = process.env): AppConfig => {
-  return envSchema.parse(env);
+  const result = envSchema.safeParse(env);
+
+  if (result.success) {
+    return result.data;
+  }
+
+  const missingVariables = result.error.issues
+    .filter((issue) => issue.code === 'invalid_type')
+    .map((issue) => issue.path.join('.'))
+    .filter(Boolean);
+
+  if (missingVariables.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missingVariables.join(', ')}. ` +
+        'Check that .env exists and contains the values listed in .env.example.',
+    );
+  }
+
+  throw new Error(`Invalid environment configuration: ${result.error.message}`);
 };

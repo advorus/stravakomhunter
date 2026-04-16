@@ -1,9 +1,12 @@
+import { loadLocalEnv } from './load-local-env.js';
 import { loadConfig } from './config.js';
 import { IntervalsIcuClient } from './clients/intervals-icu-client.js';
 import { StravaClient } from './clients/strava-client.js';
 import { WeatherClient } from './clients/weather-client.js';
 import { buildServer } from './server.js';
 import { SegmentForecastService } from './services/segment-forecast-service.js';
+
+loadLocalEnv();
 
 const config = loadConfig();
 const intervalsClient = new IntervalsIcuClient(config.INTERVALS_ICU_API_KEY);
