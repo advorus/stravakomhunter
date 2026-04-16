@@ -35,6 +35,13 @@ Example payload:
 5. Start the server with `python -m strava_kom_checker`.
 6. Run the safety gate with `python -m pytest`.
 
+## Streamlit MVP frontend
+
+1. Install Streamlit with `python -m pip install '.[frontend]'`.
+2. Run the backend API with `python -m strava_kom_checker`.
+3. In another terminal, run the UI with `streamlit run strava_kom_checker/streamlit_app.py`.
+4. Use the form to request forecasts and inspect segment results.
+
 ## Forecast caveats
 
 This version intentionally keeps the simulation explainable:
