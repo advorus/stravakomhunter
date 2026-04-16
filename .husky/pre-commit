@@ -1,1 +1,0 @@
-PYTHONPYCACHEPREFIX=.pycache python3 -m compileall -q strava_kom_checker tests
