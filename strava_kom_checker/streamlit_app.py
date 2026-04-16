@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import streamlit as st
 
-from strava_kom_checker.frontend import FrontendError, fetch_forecast, forecast_rows
+try:
+    from strava_kom_checker.frontend import FrontendError, fetch_forecast, forecast_rows
+except ModuleNotFoundError:  # pragma: no cover - script execution path fallback
+    from frontend import FrontendError, fetch_forecast, forecast_rows
 
 
 def main() -> None:
