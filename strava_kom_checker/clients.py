@@ -22,6 +22,37 @@ def fetch_json(url: str, headers: Optional[dict[str, str]] = None) -> tuple[int,
         return error.code, json.loads(body) if body else {}
 
 
+def parse_strava_duration_to_seconds(value: Any) -> Optional[float]:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not isinstance(value, str):
+        return None
+
+    text = value.strip().lower()
+    if not text:
+        return None
+
+    if text.endswith("s"):
+        try:
+            return float(text[:-1])
+        except ValueError:
+            return None
+
+    parts = text.split(":")
+    try:
+        values = [float(part) for part in parts]
+    except ValueError:
+        return None
+
+    if len(values) == 2:
+        minutes, seconds = values
+        return minutes * 60 + seconds
+    if len(values) == 3:
+        hours, minutes, seconds = values
+        return hours * 3600 + minutes * 60 + seconds
+    return None
+
+
 class IntervalsIcuClient:
     def __init__(
         self,
@@ -132,6 +163,21 @@ class StravaClient:
         ]
 
     def get_kom_time(self, segment_id: int) -> Optional[float]:
+        segment_status, segment_payload = self.fetcher(
+            f"{self.base_url}/segments/{segment_id}",
+            {
+                "Authorization": f"Bearer {self.access_token}",
+                "Accept": "application/json",
+            },
+        )
+        if 200 <= segment_status < 300:
+            xoms = segment_payload.get("xoms") or {}
+            kom_seconds = parse_strava_duration_to_seconds(xoms.get("kom"))
+            if kom_seconds is not None:
+                return kom_seconds
+        elif segment_status not in (403, 404):
+            raise RuntimeError(f"Strava segment detail lookup failed with {segment_status}")
+
         status, payload = self.fetcher(
             f"{self.base_url}/segments/{segment_id}/leaderboard?top_results_limit=1",
             {
