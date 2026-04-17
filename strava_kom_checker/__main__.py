@@ -12,7 +12,12 @@ def main() -> None:
     service = SegmentForecastService(
         config=config,
         intervals_client=IntervalsIcuClient(config.intervals_icu_api_key),
-        strava_client=StravaClient(config.strava_access_token),
+        strava_client=StravaClient(
+            access_token=config.strava_access_token,
+            client_id=config.strava_client_id,
+            client_secret=config.strava_client_secret,
+            refresh_token=config.strava_refresh_token,
+        ),
         weather_client=WeatherClient(),
     )
     server = build_server(config, service)
