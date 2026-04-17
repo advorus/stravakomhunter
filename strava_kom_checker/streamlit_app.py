@@ -8,8 +8,57 @@ except ModuleNotFoundError:  # pragma: no cover - script execution path fallback
     from frontend import FrontendError, fetch_forecast, forecast_rows
 
 
+def apply_strava_theme() -> None:
+    st.markdown(
+        """
+        <style>
+        :root {
+          --strava-orange: #fc4c02;
+          --strava-charcoal: #242428;
+          --strava-light: #f6f7f9;
+          --strava-card: #ffffff;
+        }
+        .stApp {
+          background: linear-gradient(180deg, #ffffff 0%, var(--strava-light) 100%);
+          color: var(--strava-charcoal);
+        }
+        h1, h2, h3 {
+          color: var(--strava-charcoal);
+          letter-spacing: 0.2px;
+        }
+        .stButton > button {
+          background: var(--strava-orange);
+          border: 1px solid var(--strava-orange);
+          color: #fff;
+          font-weight: 700;
+        }
+        .stButton > button:hover {
+          border-color: #db3f00;
+          background: #db3f00;
+        }
+        [data-testid="stSidebar"] {
+          background: #111111;
+          color: #f5f5f5;
+        }
+        [data-testid="stSidebar"] * {
+          color: #f5f5f5 !important;
+        }
+        [data-testid="stMetric"] {
+          background: var(--strava-card);
+          border-left: 4px solid var(--strava-orange);
+          border-radius: 8px;
+          padding: 8px 10px;
+          box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def main() -> None:
     st.set_page_config(page_title="Strava KOM Checker", page_icon=":bike:", layout="wide")
+    apply_strava_theme()
     st.title("Strava KOM Checker")
     st.caption("MVP frontend for requesting nearby segment forecasts from the backend API.")
 
@@ -58,6 +107,11 @@ def main() -> None:
 
         if forecasts:
             st.subheader("Forecasts")
+            with st.popover("How speed is calculated"):
+                st.write(
+                    "Average speed is `segment distance / predicted time` in m/s, then converted "
+                    "to km/h by multiplying by `3.6`."
+                )
             st.dataframe(forecast_rows(response), use_container_width=True)
 
             chart_rows = [
