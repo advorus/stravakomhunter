@@ -3,6 +3,7 @@ from strava_kom_checker.clients import (
     StravaClient,
     parse_strava_duration_to_seconds,
 )
+from strava_kom_checker.models import Location
 
 
 def test_strava_client_returns_none_when_leaderboard_is_forbidden():
@@ -28,6 +29,50 @@ def test_parse_strava_duration_to_seconds_handles_supported_formats():
     assert parse_strava_duration_to_seconds("2s") == 2.0
     assert parse_strava_duration_to_seconds("1:48") == 108.0
     assert parse_strava_duration_to_seconds("1:02:03") == 3723.0
+
+
+def test_strava_client_refreshes_on_401_and_retries():
+    seen_auth_headers = []
+
+    def fetcher(url, headers):
+        seen_auth_headers.append(headers["Authorization"])
+        if headers["Authorization"] == "Bearer stale-token":
+            return 401, {}
+        return 200, {"segments": []}
+
+    def token_refresher(client_id, client_secret, refresh_token):
+        assert client_id == "client-id"
+        assert client_secret == "client-secret"
+        assert refresh_token == "refresh-token"
+        return {"access_token": "fresh-token", "refresh_token": "new-refresh-token"}
+
+    client = StravaClient(
+        access_token="stale-token",
+        client_id="client-id",
+        client_secret="client-secret",
+        refresh_token="refresh-token",
+        fetcher=fetcher,
+        token_refresher=token_refresher,
+    )
+    segments = client.explore_segments_near(Location(51.5, -0.1), radius_meters=5000)
+
+    assert segments == []
+    assert seen_auth_headers == ["Bearer stale-token", "Bearer fresh-token"]
+    assert client.access_token == "fresh-token"
+    assert client.refresh_token == "new-refresh-token"
+
+
+def test_strava_client_without_refresh_credentials_still_fails_on_401():
+    def fetcher(url, headers):
+        return 401, {}
+
+    client = StravaClient(access_token="stale-token", fetcher=fetcher)
+
+    try:
+        client.explore_segments_near(Location(51.5, -0.1), radius_meters=5000)
+        raise AssertionError("Expected RuntimeError for 401 without refresh credentials")
+    except RuntimeError as error:
+        assert "401" in str(error)
 
 
 def test_intervals_client_uses_power_curves_endpoint_and_parses_curve_list():
