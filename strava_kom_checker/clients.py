@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from strava_kom_checker.models import Location, PowerCurvePoint, SegmentSummary, WeatherSnapshot
 
 JsonFetcher = Callable[[str, Optional[dict[str, str]]], tuple[int, dict[str, Any]]]
+StravaTokenRefresher = Callable[[str, str, str], dict[str, Any]]
 
 
 def fetch_json(url: str, headers: Optional[dict[str, str]] = None) -> tuple[int, dict[str, Any]]:
@@ -20,6 +21,22 @@ def fetch_json(url: str, headers: Optional[dict[str, str]] = None) -> tuple[int,
     except HTTPError as error:
         body = error.read().decode("utf-8")
         return error.code, json.loads(body) if body else {}
+
+
+def refresh_strava_token(
+    client_id: str, client_secret: str, refresh_token: str
+) -> dict[str, Any]:
+    body = urlencode(
+        {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+        }
+    ).encode("utf-8")
+    request = Request("https://www.strava.com/oauth/token", data=body, method="POST")
+    with urlopen(request, timeout=20) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 def parse_strava_duration_to_seconds(value: Any) -> Optional[float]:
@@ -117,10 +134,47 @@ class StravaClient:
         access_token: str,
         base_url: str = "https://www.strava.com/api/v3",
         fetcher: JsonFetcher = fetch_json,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+        refresh_token: Optional[str] = None,
+        token_refresher: StravaTokenRefresher = refresh_strava_token,
     ) -> None:
         self.access_token = access_token
         self.base_url = base_url
         self.fetcher = fetcher
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.refresh_token = refresh_token
+        self.token_refresher = token_refresher
+
+    def _auth_headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.access_token}",
+            "Accept": "application/json",
+        }
+
+    def _refresh_access_token(self) -> bool:
+        if not (self.client_id and self.client_secret and self.refresh_token):
+            return False
+
+        payload = self.token_refresher(
+            self.client_id, self.client_secret, self.refresh_token
+        )
+        refreshed_access_token = payload.get("access_token")
+        if not isinstance(refreshed_access_token, str) or not refreshed_access_token:
+            return False
+
+        self.access_token = refreshed_access_token
+        refreshed_refresh_token = payload.get("refresh_token")
+        if isinstance(refreshed_refresh_token, str) and refreshed_refresh_token:
+            self.refresh_token = refreshed_refresh_token
+        return True
+
+    def _fetch_with_auth(self, url: str) -> tuple[int, dict[str, Any]]:
+        status, payload = self.fetcher(url, self._auth_headers())
+        if status == 401 and self._refresh_access_token():
+            status, payload = self.fetcher(url, self._auth_headers())
+        return status, payload
 
     def explore_segments_near(
         self, location: Location, radius_meters: float
@@ -135,12 +189,8 @@ class StravaClient:
                 location.longitude + delta,
             )
         )
-        status, payload = self.fetcher(
-            f"{self.base_url}/segments/explore?{urlencode({'bounds': bounds})}",
-            {
-                "Authorization": f"Bearer {self.access_token}",
-                "Accept": "application/json",
-            },
+        status, payload = self._fetch_with_auth(
+            f"{self.base_url}/segments/explore?{urlencode({'bounds': bounds})}"
         )
         if status < 200 or status >= 300:
             raise RuntimeError(f"Strava segment explore failed with {status}")
@@ -163,12 +213,8 @@ class StravaClient:
         ]
 
     def get_kom_time(self, segment_id: int) -> Optional[float]:
-        segment_status, segment_payload = self.fetcher(
-            f"{self.base_url}/segments/{segment_id}",
-            {
-                "Authorization": f"Bearer {self.access_token}",
-                "Accept": "application/json",
-            },
+        segment_status, segment_payload = self._fetch_with_auth(
+            f"{self.base_url}/segments/{segment_id}"
         )
         if 200 <= segment_status < 300:
             xoms = segment_payload.get("xoms") or {}
@@ -178,12 +224,8 @@ class StravaClient:
         elif segment_status not in (403, 404):
             raise RuntimeError(f"Strava segment detail lookup failed with {segment_status}")
 
-        status, payload = self.fetcher(
-            f"{self.base_url}/segments/{segment_id}/leaderboard?top_results_limit=1",
-            {
-                "Authorization": f"Bearer {self.access_token}",
-                "Accept": "application/json",
-            },
+        status, payload = self._fetch_with_auth(
+            f"{self.base_url}/segments/{segment_id}/leaderboard?top_results_limit=1"
         )
         if status in (403, 404):
             return None
