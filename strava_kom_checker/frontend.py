@@ -54,13 +54,12 @@ def fetch_forecast(
 def forecast_rows(response: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for forecast in response.get("data", {}).get("forecasts", []):
+        avg_speed_mps = float(forecast.get("estimatedAverageSpeedMps", 0))
         rows.append(
             {
                 "Segment": forecast.get("segmentName"),
                 "Predicted Time (s)": round(float(forecast.get("predictedTimeSeconds", 0)), 1),
-                "Avg Speed (m/s)": round(
-                    float(forecast.get("estimatedAverageSpeedMps", 0)), 2
-                ),
+                "Avg Speed (km/h)": round(avg_speed_mps * 3.6, 2),
                 "Sustainable Power (W)": round(
                     float(forecast.get("sustainablePowerWatts", 0)), 1
                 ),
