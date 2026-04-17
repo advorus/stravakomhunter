@@ -22,5 +22,5 @@ def test_forecast_rows_formats_api_response():
     assert len(rows) == 1
     assert rows[0]["Segment"] == "Example Segment"
     assert rows[0]["Predicted Time (s)"] == 210.4
-    assert rows[0]["Avg Speed (m/s)"] == 7.12
+    assert rows[0]["Avg Speed (km/h)"] == 25.64
     assert rows[0]["Sustainable Power (W)"] == 330.0
